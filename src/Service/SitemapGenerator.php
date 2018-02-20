@@ -8,6 +8,7 @@ class SitemapGenerator
      * @var \XMLWriter
      */
     protected $sitemap;
+    protected $opened_image_url = FALSE;
 
     /**
      * @param \XMLWriter $xmlWriter
@@ -24,7 +25,14 @@ class SitemapGenerator
         $this->sitemap->setIndent(true);
 
         $this->sitemap->startElement('urlset');
-        $this->sitemap->writeAttribute('xmlns', $scheme);
+        if (is_string($scheme)) {
+            $this->sitemap->writeAttribute('xmlns', $scheme);
+        } elseif (is_array($scheme)) {
+            foreach ($scheme as $attr => $val) {
+              $this->sitemap->writeAttribute($attr, $val);
+            }
+        }
+        $this->sitemap->endAttribute();
     }
 
     /**
@@ -48,6 +56,28 @@ class SitemapGenerator
         $this->sitemap->endElement();
     }
 
+    public function startNewImageUrl($url) {
+        $sm = $this->sitemap;
+        if ($this->opened_image_url === TRUE) {
+          $sm->endElement();
+        }
+
+        $sm->startElement('url');
+        $sm->writeElement('loc', $url);
+        $this->opened_image_url = TRUE;
+    }
+
+    public function addImageEntry($image, $caption = null, $geo_location = null, $title = null, $license = null) {
+        $sm = $this->sitemap;
+        $sm->startElement('image:image');
+        $sm->writeElement('image:loc', $image);
+        if ($caption) $sm->writeElement('image:caption', $caption);
+        if ($geo_location) $sm->writeElement('image:geo_location', $geo_location);
+        if ($title) $sm->writeElement('image:title', $title);
+        if ($license) $sm->writeElement('image:license', $license);
+        $sm->endElement();
+    }
+
     /**
      * @param bool $doFlush
      *
@@ -55,6 +85,9 @@ class SitemapGenerator
      */
     public function generate($doFlush = true)
     {
+        if ($this->opened_image_url === TRUE) {
+          $this->sitemap->endElement();
+        }
         $this->sitemap->endElement();
         $this->sitemap->endDocument();
 
